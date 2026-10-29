@@ -19,7 +19,8 @@ class Image:
 @dataclass
 class Chart:
     chart_id: str
-    definition: str  # Plotly figure as JSON (data + layout)
+    kind: str  # "plotly" or "graphviz"
+    definition: str  # Plotly figure as JSON, or Graphviz DOT source
 
 
 @dataclass

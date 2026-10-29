@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS images (
     course_slug TEXT, chapter_slug TEXT, lesson_slug TEXT, src TEXT, alt TEXT, local_path TEXT
 );
 CREATE TABLE IF NOT EXISTS charts (
-    course_slug TEXT, chapter_slug TEXT, lesson_slug TEXT, chart_id TEXT, plotly_json TEXT
+    course_slug TEXT, chapter_slug TEXT, lesson_slug TEXT, chart_id TEXT, kind TEXT, definition TEXT
 );
 """
 
@@ -36,6 +36,7 @@ class SqliteStorage(BaseStorage):
     def save(self, course: Course) -> None:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         with closing(sqlite3.connect(self._db_path)) as db, db:  # `with db` = one transaction
+            self._migrate(db)
             db.executescript(SCHEMA)
             for table in ("courses", "chapters", "lessons", "images", "charts"):
                 column = "slug" if table == "courses" else "course_slug"
@@ -52,5 +53,12 @@ class SqliteStorage(BaseStorage):
                                   lesson.content_markdown, lesson.content_html))
                 db.executemany("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?)",
                                [key + (i.src, i.alt, i.local_path) for i in lesson.images])
-                db.executemany("INSERT INTO charts VALUES (?, ?, ?, ?, ?)",
-                               [key + (c.chart_id, c.definition) for c in lesson.charts])
+                db.executemany("INSERT INTO charts VALUES (?, ?, ?, ?, ?, ?)",
+                               [key + (c.chart_id, c.kind, c.definition) for c in lesson.charts])
+
+    @staticmethod
+    def _migrate(db: sqlite3.Connection) -> None:
+        """charts used to hold only Plotly JSON; recreate it (re-run the course to refill)."""
+        columns = [row[1] for row in db.execute("PRAGMA table_info(charts)")]
+        if columns and "kind" not in columns:
+            db.execute("DROP TABLE charts")

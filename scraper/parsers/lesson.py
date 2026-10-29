@@ -52,18 +52,24 @@ class LessonPageParser(BaseParser[Lesson]):
 
     @staticmethod
     def _extract_charts(content: Tag) -> list[Chart]:
+        """Plotly charts and Graphviz diagrams carry their source in data attributes."""
         charts = []
-        for node in content.select(".plotly-container"):
-            chart_id = node.get("data-plot-id", f"plot-{len(charts) + 1}")
-            raw = node.get("data-plot-definition", "")
-            try:
-                definition = json.dumps(json.loads(raw), ensure_ascii=False)
-            except ValueError:
-                definition = raw
-            charts.append(Chart(chart_id=chart_id, definition=definition))
+        for node in content.select(".plotly-container, .graphviz-container"):
+            if "plotly-container" in node.get("class", []):
+                kind, id_attr, def_attr = "plotly", "data-plot-id", "data-plot-definition"
+            else:
+                kind, id_attr, def_attr = "graphviz", "data-graph-id", "data-graph-definition"
+            chart_id = node.get(id_attr, f"{kind}-{len(charts) + 1}")
+            definition = node.get(def_attr, "")
+            if kind == "plotly":
+                try:
+                    definition = json.dumps(json.loads(definition), ensure_ascii=False)
+                except ValueError:
+                    pass
+            charts.append(Chart(chart_id=chart_id, kind=kind, definition=definition))
             marker = Tag(name="div")
             marker["data-chart"] = chart_id
-            marker.string = f"[chart: {chart_id}]"
+            marker.string = f"[{kind}: {chart_id}]"
             node.replace_with(marker)
         return charts
 
