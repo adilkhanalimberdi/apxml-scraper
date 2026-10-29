@@ -1,4 +1,5 @@
 import logging
+import shutil
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -32,6 +33,12 @@ class CachedFetcher(BaseFetcher):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
         return data
+
+    def release(self, url: str) -> None:
+        """Delete cached pages of the course at `url` (course page + its chapters/lessons)."""
+        base = self._path_for(url)
+        shutil.rmtree(base, ignore_errors=True)
+        base.with_name(base.name + ".html").unlink(missing_ok=True)
 
     def _path_for(self, url: str, suffix: str = "", subdir: str = "") -> Path:
         relative = urlparse(url).path.strip("/") or "index"

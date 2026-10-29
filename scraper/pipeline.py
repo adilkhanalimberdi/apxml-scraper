@@ -26,6 +26,7 @@ class CourseScraper:
         self._lesson_parser = lesson_parser
         self._storages = storages
         self._image_downloader = image_downloader
+        self.failed_pages = 0  # lesson pages that failed in the last scrape()
 
     def scrape(self, course_url: str) -> Course:
         course = self._course_parser.parse(self._fetcher.fetch(course_url), course_url)
@@ -35,6 +36,7 @@ class CourseScraper:
         self._fill_overview(course, course_url, self._fetcher.fetch(course_url))
 
         done = 0
+        self.failed_pages = 0
         for chapter in course.chapters:
             # Chapter overview pages (e.g. the final project) are stored as a pseudo-lesson
             # only when the chapter has no lessons of its own.
@@ -48,6 +50,7 @@ class CourseScraper:
                     html = self._fetcher.fetch(lesson.url)
                     self._lesson_parser.parse_into(lesson, html)
                 except Exception as exc:
+                    self.failed_pages += 1
                     logger.error("[%d/%d] failed %s: %s", done, total, lesson.url, exc)
                 else:
                     logger.info("[%d/%d] %s", done, total, lesson.title)

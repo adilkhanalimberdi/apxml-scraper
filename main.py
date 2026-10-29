@@ -9,8 +9,9 @@ from scraper.images import ImageDownloader
 from scraper.parsers.course import CoursePageParser
 from scraper.parsers.lesson import LessonPageParser
 from scraper.pipeline import CourseScraper
+from scraper.progress import DoneRegistry
 from scraper.storage.factory import FORMATS, get_storage
-from utils.url import normalize
+from utils.url import course_slug, normalize
 
 logger = logging.getLogger("main")
 
@@ -23,6 +24,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, help="With --all: only the first N courses")
     parser.add_argument("--format", nargs="+", default=["csv"], choices=FORMATS, help="Output format(s)")
     parser.add_argument("--download-images", action="store_true", help="Save lesson images to output/<course>/images")
+    parser.add_argument("--keep-cache", action="store_true",
+                        help="Keep downloaded HTML in cache/ (by default a course's cache is deleted once it is saved)")
+    parser.add_argument("--force", action="store_true", help="Re-scrape courses already marked as done")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     if not args.urls and not args.all:
@@ -52,13 +56,27 @@ def main() -> None:
     else:
         urls = [normalize(url) for url in args.urls]
 
+    done = DoneRegistry(settings.cache_dir / "done.txt")
     failed = []
-    for url in urls:
+    for index, url in enumerate(urls, 1):
+        slug = course_slug(url)
+        if slug in done and not args.force:
+            logger.info("(%d/%d) %s already done, skipping", index, len(urls), slug)
+            continue
+        logger.info("(%d/%d) %s", index, len(urls), slug)
         try:
             scraper.scrape(url)
         except Exception:
             logger.exception("Course failed: %s", url)
             failed.append(url)
+            continue
+        if scraper.failed_pages:  # keep the cache so a re-run only retries the missing pages
+            logger.warning("%s: %d page(s) failed, not marking as done", slug, scraper.failed_pages)
+            failed.append(url)
+            continue
+        done.add(slug)
+        if not args.keep_cache:
+            fetcher.release(url)
     if failed:
         logger.warning("%d course(s) failed: %s", len(failed), ", ".join(failed))
 
