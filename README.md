@@ -50,7 +50,7 @@ python main.py --all --format csv sqlite
 | `url ...`           | URL одного или нескольких курсов                     |
 | `--all`             | все курсы из sitemap (около 135 курсов, ~7000 страниц) |
 | `--limit N`         | с `--all`: только первые N курсов                    |
-| `--format ...`      | `csv`, `sqlite` или оба (по умолчанию `csv`)         |
+| `--format ...`      | `csv`, `sqlite`, `markdown` (по умолчанию `csv`)     |
 | `--download-images` | скачивать картинки в `output/<курс>/images/`         |
 | `--shard K/N`       | с `--all`: взять каждый N-й курс, начиная с K (параллельные процессы) |
 | `--keep-cache`      | не удалять HTML из `cache/` после сохранения курса   |
@@ -97,7 +97,10 @@ scraper/
   images.py                ImageDownloader
   fetchers/                BaseFetcher -> HttpFetcher (delay, retry), CachedFetcher (кэш на диске)
   parsers/                 BaseParser -> CoursePageParser, LessonPageParser
-  storage/                 BaseStorage -> CsvStorage, SqliteStorage; factory.py
+  storage/                 BaseStorage -> CsvStorage, SqliteStorage, MarkdownStorage; SqliteReader; factory.py
+  rendering/               BaseChartRenderer -> GraphvizRenderer, PlotlyRenderer; ChartRenderService
+  layout.py                общие имена папок и файлов
+export.py                  CLI: markdown и отрисовка из базы
 utils/url.py               нормализация URL, slug курса
 ```
 
@@ -108,6 +111,42 @@ utils/url.py               нормализация URL, slug курса
 3. Запускайте с `--format <имя>`.
 
 Остальной код менять не нужно.
+
+## Экспорт Markdown и отрисовка графиков (`export.py`)
+
+`export.py` работает только с уже собранной базой `output/apxml.db`, на сайт не ходит.
+
+```bash
+python export.py markdown              # по одному .md на страницу
+python export.py render                # Graphviz и Plotly -> PNG
+python export.py all                   # и то и другое
+python export.py all --course advanced-jax          # только один курс
+python export.py all --shard 0/3                    # параллельно: запустите 3 процесса 0/3, 1/3, 2/3
+```
+
+| Флаг                | Описание                                              |
+|---------------------|-------------------------------------------------------|
+| `--course SLUG ...` | только эти курсы                                      |
+| `--kind ...`        | `graphviz`, `plotly` (по умолчанию оба)               |
+| `--image-format`    | `png` (по умолчанию) или `svg`                        |
+| `--shard K/N`       | каждый N-й курс, начиная с K, для параллельных запусков |
+| `--force`           | перерисовать уже существующие картинки                |
+
+Для отрисовки нужны:
+- **Graphviz** (программа `dot`): `winget install Graphviz.Graphviz`. Скрипт ищет её в `PATH` и в `C:\Program Files\Graphvizin`.
+- **Plotly и Kaleido** (`pip install -r requirements.txt`) и установленный Chrome или Edge.
+
+Результат в `output/<курс>/`:
+
+```
+markdown/README.md                         оглавление и описание курса
+markdown/<NN-глава>/00-overview.md         вводный текст главы
+markdown/<NN-глава>/<NN-урок>.md           страница урока (front matter + текст)
+images/<NN-глава>/<NN-урок>/<id>.png       отрисованные диаграммы и графики
+```
+
+В `.md` отрисованные графики вставлены как `![id](../../images/...)`. Если картинку отрисовать не удалось, исходный код (DOT или JSON) вставляется блоком кода, ничего не теряется.
+Путь к картинке записывается в `charts.local_path` (CSV и SQLite).
 
 ## Скорость и возобновление
 
