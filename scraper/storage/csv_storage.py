@@ -17,7 +17,8 @@ class CsvStorage(BaseStorage):
 
         chapters, lessons, images, charts = [], [], [], []
         for chapter in course.chapters:
-            chapters.append([course.slug, chapter.slug, chapter.order, chapter.title, chapter.url])
+            chapters.append([course.slug, chapter.slug, chapter.order, chapter.title, chapter.url,
+                             chapter.overview_markdown, chapter.overview_html])
         for chapter, lesson in course.iter_lessons():
             key = [course.slug, chapter.slug, lesson.slug]
             lessons.append(key + [lesson.order, lesson.lesson_type.value, lesson.title, lesson.url,
@@ -25,8 +26,11 @@ class CsvStorage(BaseStorage):
             images += [key + [i.src, i.alt, i.local_path or ""] for i in lesson.images]
             charts += [key + [c.chart_id, c.kind, c.definition] for c in lesson.charts]
 
+        self._write(target / "course.csv", ["course_slug", "title", "url", "overview_markdown", "overview_html"],
+                    [[course.slug, course.title, course.url, course.overview_markdown, course.overview_html]])
         key_cols = ["course_slug", "chapter_slug", "lesson_slug"]
-        self._write(target / "chapters.csv", ["course_slug", "chapter_slug", "order", "title", "url"], chapters)
+        self._write(target / "chapters.csv", ["course_slug", "chapter_slug", "order", "title", "url",
+                                                    "overview_markdown", "overview_html"], chapters)
         self._write(target / "lessons.csv",
                     key_cols + ["order", "type", "title", "url", "content_markdown", "content_html"], lessons)
         self._write(target / "images.csv", key_cols + ["src", "alt", "local_path"], images)

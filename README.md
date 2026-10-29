@@ -38,13 +38,16 @@ python main.py https://apxml.com/courses/introduction-to-deep-learning/
 # CSV + SQLite, с загрузкой картинок
 python main.py https://apxml.com/courses/introduction-to-deep-learning/ --format csv sqlite --download-images
 
+# несколько курсов за раз
+python main.py <url1> <url2> <url3> --format csv sqlite --download-images
+
 # все курсы из sitemap.xml (можно ограничить --limit N)
 python main.py --all --format csv sqlite
 ```
 
 | Флаг                | Описание                                             |
 |---------------------|------------------------------------------------------|
-| `url`               | URL курса                                            |
+| `url ...`           | URL одного или нескольких курсов                     |
 | `--all`             | все курсы из sitemap (около 135 курсов, ~7000 страниц) |
 | `--limit N`         | с `--all`: только первые N курсов                    |
 | `--format ...`      | `csv`, `sqlite` или оба (по умолчанию `csv`)         |

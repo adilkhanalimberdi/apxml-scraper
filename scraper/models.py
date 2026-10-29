@@ -42,6 +42,8 @@ class Chapter:
     title: str
     url: str
     order: int
+    overview_html: str = ""
+    overview_markdown: str = ""
     lessons: list[Lesson] = field(default_factory=list)
 
 
@@ -50,6 +52,8 @@ class Course:
     slug: str
     title: str
     url: str
+    overview_html: str = ""  # description, level, prerequisites, what you'll learn
+    overview_markdown: str = ""
     chapters: list[Chapter] = field(default_factory=list)
 
     def iter_lessons(self) -> Iterator[tuple[Chapter, Lesson]]:

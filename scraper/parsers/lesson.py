@@ -9,7 +9,8 @@ from scraper.parsers.base import BaseParser
 from utils.url import to_absolute
 
 KEEP_ATTRS = {"href", "src", "alt", "title", "colspan", "rowspan", "data-chart"}
-DROP_TAGS = ("script", "style", "button", "svg", "noscript", "iframe")
+DROP_TAGS = ("script", "style", "svg", "noscript", "iframe")
+UI_BUTTONS = {"report issue", "mark as complete", "write a review"}
 
 
 class LessonPageParser(BaseParser[Lesson]):
@@ -38,6 +39,7 @@ class LessonPageParser(BaseParser[Lesson]):
 
         lesson.charts = self._extract_charts(content)
         self._replace_math(content)
+        self._handle_buttons(content)
         for tag in content.find_all(DROP_TAGS):
             tag.decompose()
         lesson.images = self._extract_images(content, base_url)
@@ -82,6 +84,18 @@ class LessonPageParser(BaseParser[Lesson]):
         for node in content.select(".katex"):
             annotation = node.find("annotation")
             node.replace_with(f"${annotation.get_text()}$" if annotation else node.get_text())
+
+    @staticmethod
+    def _handle_buttons(content: Tag) -> None:
+        """Drop site UI buttons; keep labels of accordion/tab buttons (e.g. "References") as bold text."""
+        for button in content.find_all("button"):
+            label = button.get_text(" ", strip=True)
+            if not label or label.lower() in UI_BUTTONS:
+                button.decompose()
+            else:
+                strong = Tag(name="strong")
+                strong.string = label
+                button.replace_with(strong)
 
     @staticmethod
     def _extract_images(content: Tag, base_url: str) -> list[Image]:

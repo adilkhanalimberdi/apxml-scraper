@@ -17,14 +17,15 @@ logger = logging.getLogger("main")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Scrape courses from apxml.com")
-    parser.add_argument("url", nargs="?", help="Course URL, e.g. https://apxml.com/courses/introduction-to-deep-learning/")
+    parser.add_argument("urls", nargs="*", metavar="url",
+                        help="Course URL(s), e.g. https://apxml.com/courses/introduction-to-deep-learning/")
     parser.add_argument("--all", action="store_true", help="Scrape every course listed in the sitemap")
     parser.add_argument("--limit", type=int, help="With --all: only the first N courses")
     parser.add_argument("--format", nargs="+", default=["csv"], choices=FORMATS, help="Output format(s)")
     parser.add_argument("--download-images", action="store_true", help="Save lesson images to output/<course>/images")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
-    if not args.url and not args.all:
+    if not args.urls and not args.all:
         parser.error("give a course URL or use --all")
     return args
 
@@ -49,7 +50,7 @@ def main() -> None:
         urls = SitemapCourseDiscovery(fetcher, settings.base_url).discover()[: args.limit]
         logger.info("Found %d courses", len(urls))
     else:
-        urls = [normalize(args.url)]
+        urls = [normalize(url) for url in args.urls]
 
     failed = []
     for url in urls:

@@ -7,10 +7,11 @@ from scraper.storage.base import BaseStorage
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS courses (
-    slug TEXT PRIMARY KEY, title TEXT, url TEXT
+    slug TEXT PRIMARY KEY, title TEXT, url TEXT, overview_markdown TEXT, overview_html TEXT
 );
 CREATE TABLE IF NOT EXISTS chapters (
     course_slug TEXT, slug TEXT, "order" INTEGER, title TEXT, url TEXT,
+    overview_markdown TEXT, overview_html TEXT,
     PRIMARY KEY (course_slug, slug)
 );
 CREATE TABLE IF NOT EXISTS lessons (
@@ -42,10 +43,12 @@ class SqliteStorage(BaseStorage):
                 column = "slug" if table == "courses" else "course_slug"
                 db.execute(f"DELETE FROM {table} WHERE {column} = ?", (course.slug,))
 
-            db.execute("INSERT INTO courses VALUES (?, ?, ?)", (course.slug, course.title, course.url))
+            db.execute("INSERT INTO courses VALUES (?, ?, ?, ?, ?)",
+                       (course.slug, course.title, course.url, course.overview_markdown, course.overview_html))
             for chapter in course.chapters:
-                db.execute("INSERT INTO chapters VALUES (?, ?, ?, ?, ?)",
-                           (course.slug, chapter.slug, chapter.order, chapter.title, chapter.url))
+                db.execute("INSERT INTO chapters VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           (course.slug, chapter.slug, chapter.order, chapter.title, chapter.url,
+                            chapter.overview_markdown, chapter.overview_html))
             for chapter, lesson in course.iter_lessons():
                 key = (course.slug, chapter.slug, lesson.slug)
                 db.execute("INSERT INTO lessons VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -58,7 +61,9 @@ class SqliteStorage(BaseStorage):
 
     @staticmethod
     def _migrate(db: sqlite3.Connection) -> None:
-        """charts used to hold only Plotly JSON; recreate it (re-run the course to refill)."""
-        columns = [row[1] for row in db.execute("PRAGMA table_info(charts)")]
-        if columns and "kind" not in columns:
-            db.execute("DROP TABLE charts")
+        """Recreate tables from older versions of the schema (re-run the courses to refill)."""
+        for table, new_column in (("charts", "kind"), ("courses", "overview_markdown"),
+                                  ("chapters", "overview_markdown")):
+            columns = [row[1] for row in db.execute(f"PRAGMA table_info({table})")]
+            if columns and new_column not in columns:
+                db.execute(f"DROP TABLE {table}")
