@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import shutil
 from pathlib import Path
@@ -48,5 +49,8 @@ class CachedFetcher(BaseFetcher):
         base.with_name(base.name + ".html").unlink(missing_ok=True)
 
     def _path_for(self, url: str, suffix: str = "", subdir: str = "") -> Path:
-        relative = urlparse(url).path.strip("/") or "index"
+        parts = urlparse(url)
+        relative = parts.path.strip("/") or "index"
+        if subdir and parts.query:  # assets such as /api/og?title=... differ only by their query
+            relative += "_" + hashlib.sha1(parts.query.encode()).hexdigest()[:10]
         return self._cache_dir / subdir / f"{relative}{suffix}"

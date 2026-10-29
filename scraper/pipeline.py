@@ -34,6 +34,8 @@ class CourseScraper:
         logger.info("%s: %d chapters, %d pages", course.slug, len(course.chapters), total)
 
         self._fill_overview(course, course_url, self._fetcher.fetch(course_url))
+        if self._image_downloader:
+            self._image_downloader.download_preview(course)
 
         done = 0
         self.failed_pages = 0

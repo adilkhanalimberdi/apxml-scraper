@@ -26,8 +26,12 @@ class CsvStorage(BaseStorage):
             images += [key + [i.src, i.alt, i.local_path or ""] for i in lesson.images]
             charts += [key + [c.chart_id, c.kind, c.definition, c.local_path or ""] for c in lesson.charts]
 
-        self._write(target / "course.csv", ["course_slug", "title", "url", "overview_markdown", "overview_html"],
-                    [[course.slug, course.title, course.url, course.overview_markdown, course.overview_html]])
+        self._write(target / "course.csv",
+                    ["course_slug", "title", "url", "description", "preview_url", "preview_path",
+                     "structured_data", "overview_markdown", "overview_html"],
+                    [[course.slug, course.title, course.url, course.description, course.preview_url,
+                      course.preview_path or "", course.structured_data, course.overview_markdown,
+                      course.overview_html]])
         key_cols = ["course_slug", "chapter_slug", "lesson_slug"]
         self._write(target / "chapters.csv", ["course_slug", "chapter_slug", "order", "title", "url",
                                                     "overview_markdown", "overview_html"], chapters)

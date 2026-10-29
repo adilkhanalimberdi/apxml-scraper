@@ -1,3 +1,4 @@
+import json
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -16,6 +17,7 @@ class CoursePageParser(BaseParser[Course]):
         parsed = urlparse(url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
         course = Course(slug=slug, title=self._title(soup), url=normalize(url))
+        self._fill_metadata(course, soup)
 
         chapters: dict[str, Chapter] = {}
         seen: set[str] = set()
@@ -39,6 +41,20 @@ class CoursePageParser(BaseParser[Course]):
                     order=len(chapter.lessons) + 1, lesson_type=self._lesson_type(parts[1]),
                 ))
         return course
+
+    @staticmethod
+    def _fill_metadata(course: Course, soup: BeautifulSoup) -> None:
+        image = soup.find("meta", attrs={"property": "og:image"})
+        course.preview_url = image["content"] if image and image.get("content") else ""
+        description = soup.find("meta", attrs={"name": "description"})
+        course.description = description["content"] if description and description.get("content") else ""
+        blocks = []
+        for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+            try:
+                blocks.append(json.loads(script.string or ""))
+            except ValueError:
+                continue
+        course.structured_data = json.dumps(blocks, ensure_ascii=False) if blocks else ""
 
     @staticmethod
     def _title(soup: BeautifulSoup) -> str:

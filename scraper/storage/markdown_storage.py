@@ -42,8 +42,11 @@ class MarkdownStorage(BaseStorage):
         return "---\n" + "\n".join(lines) + "\n---\n\n"
 
     def _course_index(self, course: Course) -> str:
-        parts = [self._front_matter(title=course.title, url=course.url), f"# {course.title}\n\n",
-                 course.overview_markdown, "\n\n## Contents\n\n"]
+        parts = [self._front_matter(title=course.title, url=course.url, description=course.description),
+                 f"# {course.title}\n\n"]
+        if course.preview_path:
+            parts.append(f"![preview](../{course.preview_path})\n\n")
+        parts += [course.overview_markdown, "\n\n## Contents\n\n"]
         for chapter in course.chapters:
             parts.append(f"### {chapter.title}\n\n")
             for lesson in chapter.lessons:

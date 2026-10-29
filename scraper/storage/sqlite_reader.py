@@ -22,12 +22,15 @@ class SqliteReader:
 
     def load_course(self, slug: str) -> Course:
         with closing(sqlite3.connect(self._db_path)) as db:
-            row = db.execute("SELECT title, url, overview_markdown, overview_html FROM courses WHERE slug = ?",
-                             (slug,)).fetchone()
+            have = {col[1] for col in db.execute("PRAGMA table_info(courses)")}
+            extra = [c if c in have else "NULL" for c in ("description", "preview_url", "preview_path", "structured_data")]
+            row = db.execute("SELECT title, url, overview_markdown, overview_html, " + ", ".join(extra)
+                             + " FROM courses WHERE slug = ?", (slug,)).fetchone()
             if row is None:
                 raise KeyError(f"Course not in database: {slug}")
             course = Course(slug=slug, title=row[0], url=row[1], overview_markdown=row[2] or "",
-                            overview_html=row[3] or "")
+                            overview_html=row[3] or "", description=row[4] or "", preview_url=row[5] or "",
+                            preview_path=row[6], structured_data=row[7] or "")
 
             chapters = {}
             for r in db.execute('SELECT slug, "order", title, url, overview_markdown, overview_html '

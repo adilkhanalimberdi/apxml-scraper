@@ -7,7 +7,8 @@ from scraper.storage.base import BaseStorage
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS courses (
-    slug TEXT PRIMARY KEY, title TEXT, url TEXT, overview_markdown TEXT, overview_html TEXT
+    slug TEXT PRIMARY KEY, title TEXT, url TEXT, overview_markdown TEXT, overview_html TEXT,
+    description TEXT, preview_url TEXT, preview_path TEXT, structured_data TEXT
 );
 CREATE TABLE IF NOT EXISTS chapters (
     course_slug TEXT, slug TEXT, "order" INTEGER, title TEXT, url TEXT,
@@ -43,8 +44,9 @@ class SqliteStorage(BaseStorage):
                 column = "slug" if table == "courses" else "course_slug"
                 db.execute(f"DELETE FROM {table} WHERE {column} = ?", (course.slug,))
 
-            db.execute("INSERT INTO courses VALUES (?, ?, ?, ?, ?)",
-                       (course.slug, course.title, course.url, course.overview_markdown, course.overview_html))
+            db.execute("INSERT INTO courses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       (course.slug, course.title, course.url, course.overview_markdown, course.overview_html,
+                        course.description, course.preview_url, course.preview_path, course.structured_data))
             for chapter in course.chapters:
                 db.execute("INSERT INTO chapters VALUES (?, ?, ?, ?, ?, ?, ?)",
                            (course.slug, chapter.slug, chapter.order, chapter.title, chapter.url,
@@ -67,6 +69,9 @@ class SqliteStorage(BaseStorage):
             columns = [row[1] for row in db.execute(f"PRAGMA table_info({table})")]
             if columns and new_column not in columns:
                 db.execute(f"DROP TABLE {table}")
-        columns = [row[1] for row in db.execute("PRAGMA table_info(charts)")]
-        if columns and "local_path" not in columns:  # added later: keep the rows
-            db.execute("ALTER TABLE charts ADD COLUMN local_path TEXT")
+        # columns added later: keep the rows
+        for table, column in (("charts", "local_path"), ("courses", "description"), ("courses", "preview_url"),
+                              ("courses", "preview_path"), ("courses", "structured_data")):
+            columns = [row[1] for row in db.execute(f"PRAGMA table_info({table})")]
+            if columns and column not in columns:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")

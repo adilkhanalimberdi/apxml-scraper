@@ -101,6 +101,7 @@ scraper/
   rendering/               BaseChartRenderer -> GraphvizRenderer, PlotlyRenderer; ChartRenderService
   layout.py                общие имена папок и файлов
 export.py                  CLI: markdown и отрисовка из базы
+enrich.py                  CLI: превью и метаданные курсов
 utils/url.py               нормализация URL, slug курса
 ```
 
@@ -147,6 +148,20 @@ images/<NN-глава>/<NN-урок>/<id>.png       отрисованные д�
 
 В `.md` отрисованные графики вставлены как `![id](../../images/...)`. Если картинку отрисовать не удалось, исходный код (DOT или JSON) вставляется блоком кода, ничего не теряется.
 Путь к картинке записывается в `charts.local_path` (CSV и SQLite).
+
+## Превью и метаданные курсов (`enrich.py`)
+
+`enrich.py` докачивает для курсов, уже лежащих в базе, превью (`og:image`, PNG 1200x630), мета-описание и структурированные данные JSON-LD (преподаватель, трудоёмкость, провайдер).
+Скачивает только главную страницу каждого курса (1 запрос на курс), уроки заново не качаются.
+
+```bash
+python enrich.py                       # все курсы
+python enrich.py --course advanced-jax
+python enrich.py --shard 0/3           # параллельные процессы
+```
+
+Результат: `output/<курс>/preview.png`, колонки `description`, `preview_url`, `preview_path`, `structured_data` в `course.csv` и таблице `courses`, картинка и описание в `markdown/README.md`.
+При обычном скачивании (`main.py ... --download-images`) превью и метаданные сохраняются сразу.
 
 ## Скорость и возобновление
 

@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 from scraper.config import Settings
 from scraper.fetchers.base import BaseFetcher
-from scraper.models import Image, Lesson
+from scraper.models import Course, Image, Lesson
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,31 @@ class ImageDownloader:
                 image.fetch_url = fresh.get(image.src, image.fetch_url)
         for image in pending:
             logger.warning("Image not downloaded: %s", image.src)
+
+    def download_preview(self, course: Course) -> None:
+        """Save the course's og:image as output/<course>/preview.<png|jpg|webp>."""
+        if not course.preview_url:
+            return
+        try:
+            data = self._fetcher.fetch_bytes(course.preview_url)
+        except Exception as exc:
+            logger.warning("Preview failed for %s: %s", course.slug, exc)
+            return
+        extension = self._extension(data)
+        target = self._output_dir / course.slug
+        target.mkdir(parents=True, exist_ok=True)
+        (target / f"preview.{extension}").write_bytes(data)
+        course.preview_path = f"preview.{extension}"
+
+    @staticmethod
+    def _extension(data: bytes) -> str:
+        if data.startswith(b"\x89PNG"):
+            return "png"
+        if data.startswith(b"\xff\xd8"):
+            return "jpg"
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            return "webp"
+        return "bin"
 
     def _save(self, target: Path, image: Image) -> bool:
         name = self._filename(image.src)
