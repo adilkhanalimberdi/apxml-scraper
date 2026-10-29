@@ -12,7 +12,7 @@ RETRY_STATUSES = {429, 500, 502, 503, 504}
 
 
 class HttpFetcher(BaseFetcher):
-    def __init__(self, settings: Settings, timeout: float = 30, max_retries: int = 3):
+    def __init__(self, settings: Settings, timeout: float = 30, max_retries: int = 5):
         self.delay = settings.delay
         self.timeout = timeout
         self.max_retries = max_retries
@@ -38,8 +38,16 @@ class HttpFetcher(BaseFetcher):
                     response.raise_for_status()
                     return response
                 logger.warning("HTTP %d for %s, attempt %d/%d", response.status_code, url, attempt, self.max_retries)
+                if response.status_code == 429:  # rate limited: back off for real, honour Retry-After
+                    time.sleep(self._retry_after(response, default=30 * attempt))
+                    continue
             time.sleep(self.delay * 2 ** attempt)
         raise RuntimeError(f"Failed to fetch {url} after {self.max_retries} attempts")
+
+    @staticmethod
+    def _retry_after(response: requests.Response, default: float) -> float:
+        value = response.headers.get("Retry-After", "")
+        return min(float(value), 300) if value.isdigit() else default
 
     def _wait(self) -> None:
         elapsed = time.monotonic() - self._last_request
