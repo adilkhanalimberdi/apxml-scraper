@@ -25,6 +25,13 @@ class CachedFetcher(BaseFetcher):
         path.write_text(html, encoding="utf-8")
         return html
 
+    def fetch_fresh(self, url: str) -> str:
+        html = self._fetcher.fetch_fresh(url)
+        path = self._path_for(url, suffix=".html")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(html, encoding="utf-8")
+        return html
+
     def fetch_bytes(self, url: str) -> bytes:
         path = self._path_for(url, subdir="_assets")
         if path.exists():

@@ -14,6 +14,7 @@ class Image:
     src: str
     alt: str = ""
     local_path: str | None = None
+    fetch_url: str = ""  # pre-signed URL (expires in ~1h), used for the download only, never stored
 
 
 @dataclass

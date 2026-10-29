@@ -1,12 +1,12 @@
 import json
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from scraper.models import Chart, Image, Lesson
 from scraper.parsers.base import BaseParser
-from utils.url import to_absolute
+from utils.url import normalize
 
 KEEP_ATTRS = {"href", "src", "alt", "title", "colspan", "rowspan", "data-chart"}
 DROP_TAGS = ("script", "style", "svg", "noscript", "iframe")
@@ -105,9 +105,10 @@ class LessonPageParser(BaseParser[Lesson]):
             if not src or src.startswith("data:"):
                 img.decompose()
                 continue
-            src = to_absolute(base_url, src)
+            signed = urljoin(base_url + "/", src)
+            src = normalize(signed)  # drop the expiring S3 signature from what we store
             img["src"] = src
-            images.append(Image(src=src, alt=img.get("alt", "")))
+            images.append(Image(src=src, alt=img.get("alt", ""), fetch_url=signed))
         return images
 
     @staticmethod

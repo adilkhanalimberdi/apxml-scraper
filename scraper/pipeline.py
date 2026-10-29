@@ -54,12 +54,19 @@ class CourseScraper:
                     logger.error("[%d/%d] failed %s: %s", done, total, lesson.url, exc)
                 else:
                     logger.info("[%d/%d] %s", done, total, lesson.title)
+                    if self._image_downloader and lesson.images:
+                        self._image_downloader.download_lesson(
+                            course.slug, lesson, refresh=lambda lesson=lesson: self._fresh_image_urls(lesson))
 
-        if self._image_downloader:
-            self._image_downloader.download_all(course)
         for storage in self._storages:
             storage.save(course)
         return course
+
+    def _fresh_image_urls(self, lesson: Lesson) -> dict[str, str]:
+        """Re-read the lesson page (bypassing the cache) and return {clean src: signed URL}."""
+        page = Lesson(slug=lesson.slug, title=lesson.title, url=lesson.url, order=lesson.order)
+        self._lesson_parser.parse_into(page, self._fetcher.fetch_fresh(lesson.url))
+        return {image.src: image.fetch_url for image in page.images}
 
     def _safe_chapter_overview(self, chapter: Chapter) -> None:
         try:
