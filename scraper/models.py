@@ -22,6 +22,7 @@ class Chart:
     chart_id: str
     kind: str  # "plotly" or "graphviz"
     definition: str  # Plotly figure as JSON, or Graphviz DOT source
+    local_path: str | None = None  # rendered picture, relative to the course folder
 
 
 @dataclass

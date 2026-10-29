@@ -24,7 +24,7 @@ class CsvStorage(BaseStorage):
             lessons.append(key + [lesson.order, lesson.lesson_type.value, lesson.title, lesson.url,
                                   lesson.content_markdown, lesson.content_html])
             images += [key + [i.src, i.alt, i.local_path or ""] for i in lesson.images]
-            charts += [key + [c.chart_id, c.kind, c.definition] for c in lesson.charts]
+            charts += [key + [c.chart_id, c.kind, c.definition, c.local_path or ""] for c in lesson.charts]
 
         self._write(target / "course.csv", ["course_slug", "title", "url", "overview_markdown", "overview_html"],
                     [[course.slug, course.title, course.url, course.overview_markdown, course.overview_html]])
@@ -34,7 +34,7 @@ class CsvStorage(BaseStorage):
         self._write(target / "lessons.csv",
                     key_cols + ["order", "type", "title", "url", "content_markdown", "content_html"], lessons)
         self._write(target / "images.csv", key_cols + ["src", "alt", "local_path"], images)
-        self._write(target / "charts.csv", key_cols + ["chart_id", "kind", "definition"], charts)
+        self._write(target / "charts.csv", key_cols + ["chart_id", "kind", "definition", "local_path"], charts)
 
     @staticmethod
     def _write(path: Path, header: list[str], rows: list[list]) -> None:

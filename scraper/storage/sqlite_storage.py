@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS images (
     course_slug TEXT, chapter_slug TEXT, lesson_slug TEXT, src TEXT, alt TEXT, local_path TEXT
 );
 CREATE TABLE IF NOT EXISTS charts (
-    course_slug TEXT, chapter_slug TEXT, lesson_slug TEXT, chart_id TEXT, kind TEXT, definition TEXT
+    course_slug TEXT, chapter_slug TEXT, lesson_slug TEXT, chart_id TEXT, kind TEXT, definition TEXT, local_path TEXT
 );
 """
 
@@ -56,8 +56,8 @@ class SqliteStorage(BaseStorage):
                                   lesson.content_markdown, lesson.content_html))
                 db.executemany("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?)",
                                [key + (i.src, i.alt, i.local_path) for i in lesson.images])
-                db.executemany("INSERT INTO charts VALUES (?, ?, ?, ?, ?, ?)",
-                               [key + (c.chart_id, c.kind, c.definition) for c in lesson.charts])
+                db.executemany("INSERT INTO charts VALUES (?, ?, ?, ?, ?, ?, ?)",
+                               [key + (c.chart_id, c.kind, c.definition, c.local_path) for c in lesson.charts])
 
     @staticmethod
     def _migrate(db: sqlite3.Connection) -> None:
@@ -67,3 +67,6 @@ class SqliteStorage(BaseStorage):
             columns = [row[1] for row in db.execute(f"PRAGMA table_info({table})")]
             if columns and new_column not in columns:
                 db.execute(f"DROP TABLE {table}")
+        columns = [row[1] for row in db.execute("PRAGMA table_info(charts)")]
+        if columns and "local_path" not in columns:  # added later: keep the rows
+            db.execute("ALTER TABLE charts ADD COLUMN local_path TEXT")
