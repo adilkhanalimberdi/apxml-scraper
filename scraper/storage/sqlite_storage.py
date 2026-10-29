@@ -36,7 +36,7 @@ class SqliteStorage(BaseStorage):
 
     def save(self, course: Course) -> None:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with closing(sqlite3.connect(self._db_path)) as db, db:  # `with db` = one transaction
+        with closing(sqlite3.connect(self._db_path, timeout=120)) as db, db:  # `with db` = one transaction
             self._migrate(db)
             db.executescript(SCHEMA)
             for table in ("courses", "chapters", "lessons", "images", "charts"):

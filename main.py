@@ -24,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int, help="With --all: only the first N courses")
     parser.add_argument("--format", nargs="+", default=["csv"], choices=FORMATS, help="Output format(s)")
     parser.add_argument("--download-images", action="store_true", help="Save lesson images to output/<course>/images")
+    parser.add_argument("--shard", metavar="K/N",
+                        help="With --all: process only every N-th course starting at K (0-based), to run N workers in parallel")
     parser.add_argument("--keep-cache", action="store_true",
                         help="Keep downloaded HTML in cache/ (by default a course's cache is deleted once it is saved)")
     parser.add_argument("--force", action="store_true", help="Re-scrape courses already marked as done")
@@ -52,6 +54,9 @@ def main() -> None:
 
     if args.all:
         urls = SitemapCourseDiscovery(fetcher, settings.base_url).discover()[: args.limit]
+        if args.shard:
+            index, count = map(int, args.shard.split("/"))
+            urls = urls[index::count]
         logger.info("Found %d courses", len(urls))
     else:
         urls = [normalize(url) for url in args.urls]
