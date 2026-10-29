@@ -17,6 +17,12 @@ class Image:
 
 
 @dataclass
+class Chart:
+    chart_id: str
+    definition: str  # Plotly figure as JSON (data + layout)
+
+
+@dataclass
 class Lesson:
     slug: str
     title: str
@@ -24,7 +30,9 @@ class Lesson:
     order: int
     lesson_type: LessonType = LessonType.LESSON
     content_html: str = ""
+    content_markdown: str = ""
     images: list[Image] = field(default_factory=list)
+    charts: list[Chart] = field(default_factory=list)
 
 
 @dataclass
