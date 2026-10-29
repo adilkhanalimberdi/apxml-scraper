@@ -21,6 +21,12 @@ class HttpFetcher(BaseFetcher):
         self._session.headers["User-Agent"] = settings.user_agent
 
     def fetch(self, url: str) -> str:
+        return self._get(url).content.decode("utf-8", errors="replace")
+
+    def fetch_bytes(self, url: str) -> bytes:
+        return self._get(url).content
+
+    def _get(self, url: str) -> requests.Response:
         for attempt in range(1, self.max_retries + 1):
             self._wait()
             try:
@@ -30,7 +36,7 @@ class HttpFetcher(BaseFetcher):
             else:
                 if response.status_code not in RETRY_STATUSES:
                     response.raise_for_status()
-                    return response.text
+                    return response
                 logger.warning("HTTP %d for %s, attempt %d/%d", response.status_code, url, attempt, self.max_retries)
             time.sleep(self.delay * 2 ** attempt)
         raise RuntimeError(f"Failed to fetch {url} after {self.max_retries} attempts")
